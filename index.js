@@ -3,9 +3,17 @@ const cors = require("cors");
 const port = process.env.PORT || 5000;
 require("dotenv").config();
 const app = express();
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
 const username = process.env.DB_USER;
 const password = process.env.DB_PASSWORD;
@@ -24,12 +32,49 @@ const client = new MongoClient(uri, {
   },
 });
 
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  // console.log("Token: ", token);
+  if (!token) {
+    return res.status(404).send({ Message: "Unauthorized Access!!!" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+    if (err) {
+      return res.status(404).send({ Message: "Unauthorized Access!!!" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     const userCollection = client.db("JobPortal").collection("users");
     const jobCollection = client.db("JobPortal").collection("jobs");
+
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      // console.log("User: ", user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN, {
+        expiresIn: "1h",
+      });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        })
+        .send({ success: true });
+    });
+    app.post("/logout", async (req, res) => {
+      res
+        .clearCookie("token", {
+          maxAge: 0,
+        })
+        .send({ success: true });
+    });
 
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -57,30 +102,37 @@ async function run() {
     });
 
     app.get("/allJobs", async (req, res) => {
-      var result = [];
-      if (!req.query) {
-        result = await jobCollection.find().toArray();
-      } else {
-        const page = parseInt(req.query.page);
-        const size = parseInt(req.query.size);
-
-        console.log("Page: ", page);
-        console.log("Size: ", size);
-        let query = {};
-        if (req.query?.email) {
-          query = { email: req.query.email };
-        } else if (req.query?.category) {
-          query = { category: req.query.category };
-        }
-        result = await jobCollection
-          .find(query)
-          .skip(page * size)
-          .limit(size)
-          .toArray();
+      let query = {};
+      if (req.query?.category) {
+        query = { category: req.query.category };
       }
+      const result = await jobCollection.find(query).toArray();
+
       // const result = await jobCollection.find().toArray();
       res.send(result);
     });
+    app.get("/myJobs", verifyToken, async (req, res) => {
+      // console.log("User: ", req.user.email);
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+
+      // console.log("Page: ", page);
+      // console.log("Size: ", size);
+      const query = { email: req.query?.email };
+      if (req.user.email !== req.query?.email) {
+        return res.status(403).send({ message: "Invalid User" });
+      }
+      // if (req.query?.email) {
+      //   query = { email: req.query.email };
+      // }
+      const result = await jobCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
+      res.send(result);
+    });
+
     app.get("/allJobs/:id", async (req, res) => {
       const id = req.params.id;
       // console.log(id);
