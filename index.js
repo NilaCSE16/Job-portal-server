@@ -57,22 +57,27 @@ async function run() {
     });
 
     app.get("/allJobs", async (req, res) => {
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
+      var result = [];
+      if (!req.query) {
+        result = await jobCollection.find().toArray();
+      } else {
+        const page = parseInt(req.query.page);
+        const size = parseInt(req.query.size);
 
-      console.log("Page: ", page);
-      console.log("Size: ", size);
-      let query = {};
-      if (req.query?.email) {
-        query = { email: req.query.email };
-      } else if (req.query?.category) {
-        query = { category: req.query.category };
+        console.log("Page: ", page);
+        console.log("Size: ", size);
+        let query = {};
+        if (req.query?.email) {
+          query = { email: req.query.email };
+        } else if (req.query?.category) {
+          query = { category: req.query.category };
+        }
+        result = await jobCollection
+          .find(query)
+          .skip(page * size)
+          .limit(size)
+          .toArray();
       }
-      const result = await jobCollection
-        .find(query)
-        .skip(page * size)
-        .limit(size)
-        .toArray();
       // const result = await jobCollection.find().toArray();
       res.send(result);
     });
