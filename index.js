@@ -10,7 +10,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://job-portal-cdfef.firebaseapp.com/",
+      "https://job-portal-cdfef.firebaseapp.com",
+      "https://job-portal-client-peach.vercel.app",
     ],
     credentials: true,
   })
