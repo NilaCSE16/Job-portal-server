@@ -106,11 +106,16 @@ async function run() {
     });
 
     app.get("/allJobs", async (req, res) => {
-      let query = {};
-      if (req.query?.category) {
-        query = { category: req.query.category };
+      var result = [];
+      if (!req.query) {
+        result = await jobCollection.find(query).toArray();
+      } else {
+        let query = {};
+        if (req.query?.category) {
+          query = { category: req.query.category };
+        }
+        result = await jobCollection.find(query).toArray();
       }
-      const result = await jobCollection.find(query).toArray();
 
       // const result = await jobCollection.find().toArray();
       res.send(result);
