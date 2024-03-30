@@ -69,6 +69,8 @@ async function run() {
           httpOnly: true,
           secure: true,
           sameSite: "none",
+          path: "/",
+          partitioned: true,
         })
         .send({ success: true });
     });
