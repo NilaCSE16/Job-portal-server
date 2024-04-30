@@ -86,7 +86,8 @@ async function run() {
       const user = req.body;
       //   console.log(user);
       const result = await userCollection.insertOne(user);
-      res.send(result);
+      // res.send(result);
+      res.status(200).json({ message: "Successfully added" });
     });
     app.get("/users", async (req, res) => {
       // const email = req.query.email;
@@ -104,7 +105,8 @@ async function run() {
       const newJob = req.body;
       // console.log(newJob);
       const result = await jobCollection.insertOne(newJob);
-      res.send(result);
+      // res.send(result);
+      res.status(200).json({ message: "Successfully added" });
     });
 
     app.get("/allJobs", async (req, res) => {
